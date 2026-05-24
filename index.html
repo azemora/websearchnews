@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NewsSearch · Consultoria em Pessoas, Liderança e Cultura</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], serif: ['"Source Serif Pro"', 'Georgia', 'serif'] },
+        colors: {
+          ink: { 950: '#0a0a0b', 900: '#111114', 800: '#1c1c21', 700: '#2a2a31' },
+          accent: { DEFAULT: '#c3a36b', soft: '#e8d9b8' },
+        },
+      }
+    }
+  }
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+Pro:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  body { background: radial-gradient(circle at 20% -10%, #1b1b22 0%, #0a0a0b 55%); min-height: 100vh; }
+  .chip { transition: all .15s ease; }
+  .chip[aria-pressed="true"] { background: #c3a36b; color: #0a0a0b; border-color: #c3a36b; }
+  .card { transition: border-color .2s ease, transform .2s ease; }
+  .card:hover { border-color: #3a3a44; transform: translateY(-2px); }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .scroll-thin::-webkit-scrollbar { height: 6px; }
+  .scroll-thin::-webkit-scrollbar-thumb { background: #2a2a31; border-radius: 3px; }
+</style>
+</head>
+<body class="text-zinc-200 font-sans antialiased">
+
+<div class="max-w-6xl mx-auto px-5 sm:px-8 py-10">
+
+  <!-- Cabeçalho -->
+  <header class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 border-b border-ink-800 pb-6">
+    <div>
+      <div class="text-xs tracking-[0.18em] uppercase text-accent mb-2">Briefing diário</div>
+      <h1 class="font-serif text-3xl sm:text-4xl text-white leading-tight">
+        Matéria-prima de conteúdo
+      </h1>
+      <p class="text-sm text-zinc-400 mt-2 max-w-xl">
+        Liderança, cultura organizacional e desenvolvimento de times.
+        Curadoria filtrada para empresas de turismo, hotelaria, parques e agronegócio.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="text-right">
+        <div id="today" class="text-sm text-zinc-300"></div>
+        <div id="meta" class="text-xs text-zinc-500"></div>
+      </div>
+      <button id="refresh"
+        class="px-4 py-2 rounded-md border border-ink-700 bg-ink-900 text-sm text-zinc-100 hover:bg-ink-800 hover:border-accent transition">
+        Atualizar
+      </button>
+    </div>
+  </header>
+
+  <!-- Filtros -->
+  <section class="mt-6">
+    <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2">Eixos temáticos</div>
+    <div id="filters" class="flex flex-wrap gap-2 scroll-thin overflow-x-auto pb-1"></div>
+  </section>
+
+  <!-- Recomendação do dia -->
+  <section id="featured-wrap" class="mt-8 hidden">
+    <div class="text-xs uppercase tracking-widest text-accent mb-2">Recomendação do dia</div>
+    <div id="featured"></div>
+  </section>
+
+  <!-- Lista -->
+  <section class="mt-10">
+    <div class="flex items-baseline justify-between mb-4">
+      <h2 class="font-serif text-xl text-white">Itens selecionados</h2>
+      <div id="count" class="text-xs text-zinc-500"></div>
+    </div>
+    <div id="status" class="text-sm text-zinc-400"></div>
+    <div id="list" class="grid grid-cols-1 gap-4"></div>
+  </section>
+
+  <!-- Rodapé com regras de uso -->
+  <section class="mt-14 border-t border-ink-800 pt-6">
+    <details class="text-sm text-zinc-400">
+      <summary class="text-zinc-200 font-medium">Lente obrigatória aplicada na curadoria</summary>
+      <ol class="list-decimal pl-5 mt-3 space-y-1">
+        <li>O cliente que eu atendo vai se incomodar com essa notícia?</li>
+        <li>Ele vai reconhecer o valor de investir em pessoas?</li>
+        <li>Ao ler, ele tende a perceber que o problema dele também existe e que precisa decidir algo?</li>
+      </ol>
+      <p class="mt-2">Cada item da lista atende a pelo menos duas dessas perguntas. O critério é o quanto o caso fere ou ameaça a vida prática do cliente final.</p>
+    </details>
+    <div id="errors" class="mt-4 text-xs text-zinc-600"></div>
+  </section>
+
+</div>
+
+<!-- Template do card -->
+<template id="tpl-card">
+  <article class="card rounded-xl border border-ink-800 bg-ink-900/80 p-5 sm:p-6">
+    <div class="flex flex-wrap gap-2 mb-3 themes"></div>
+    <a class="title block font-serif text-xl text-white hover:text-accent leading-snug" target="_blank" rel="noopener"></a>
+    <div class="mt-2 text-xs text-zinc-500 meta"></div>
+    <p class="mt-3 text-sm text-zinc-300 leading-relaxed summary"></p>
+
+    <details class="mt-4">
+      <summary class="text-xs uppercase tracking-widest text-accent hover:text-accent-soft">
+        Ângulo para conteúdo + briefing
+      </summary>
+      <div class="briefing mt-3 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm"></div>
+      <button class="copy mt-4 text-xs px-3 py-1.5 rounded border border-ink-700 text-zinc-200 hover:bg-ink-800">
+        Copiar briefing pronto
+      </button>
+    </details>
+  </article>
+</template>
+
+<script>
+const $ = (sel, root=document) => root.querySelector(sel);
+const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+const state = {
+  data: null,
+  activeThemes: new Set(),
+};
+
+const dateFmt = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' });
+const dateShort = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+
+function setToday() {
+  $('#today').textContent = dateFmt.format(new Date());
+}
+
+function fmtDate(iso) {
+  if (!iso) return 'data não informada';
+  try { return dateShort.format(new Date(iso)); } catch { return iso; }
+}
+
+function suggestFormat(item) {
+  const len = (item.summary || '').length;
+  const themes = item.themes || [];
+  if (themes.includes('Conflitos com repercussão')) {
+    return { formato: 'Carrossel', enquadramento: 'Preventivo' };
+  }
+  if (themes.includes('IA no trabalho')) {
+    return { formato: 'Aula curta ou reels', enquadramento: 'Estratégico' };
+  }
+  if (len > 600) return { formato: 'Carrossel ou aula', enquadramento: 'Didático' };
+  return { formato: 'Post único', enquadramento: 'Crítico' };
+}
+
+function impactoHeuristica(item) {
+  const t = item.themes || [];
+  if (t.includes('Conflitos com repercussão')) {
+    return 'Clientes com operação intensiva em pessoas (hotelaria, parques, agro) e pouca maturidade em compliance trabalhista. Ativos em risco: reputação e folha. Chance alta de já estarem expostos.';
+  }
+  if (t.includes('IA no trabalho')) {
+    return 'Empresas de médio porte testando IA sem política clara. Ativo em risco: dado sensível e decisão delegada a ferramenta não auditada. Exposição silenciosa, ainda invisível para a maioria.';
+  }
+  if (t.includes('Engajamento e equipes') || t.includes('Saúde mental e burnout')) {
+    return 'Cliente com turnover acima da média e líderes operacionais sem preparo de gestão. Ativo em risco: continuidade do serviço, especialmente em alta temporada. Provável que já viva isso e atribua a outras causas.';
+  }
+  if (t.includes('Nova geração')) {
+    return 'Cliente que contrata na base e percebe queda de permanência. Ativo em risco: custo de admissão repetida e qualidade do atendimento.';
+  }
+  return 'Cliente operando em setor com alta interação humana. Ativo em risco: produtividade e clima. Probabilidade média de já estar exposto.';
+}
+
+function ganchoHeuristica(item) {
+  const t = item.themes || [];
+  if (t.includes('Conflitos com repercussão')) {
+    return 'Quando um caso de conduta vira notícia, o passivo já existe há meses na operação.';
+  }
+  if (t.includes('IA no trabalho')) {
+    return 'Adotar IA sem desenhar a governança é terceirizar a decisão para uma ferramenta que ninguém auditou.';
+  }
+  if (t.includes('Engajamento e equipes')) {
+    return 'Engajamento não cai por falta de benefício. Cai quando a liderança imediata não sabe conduzir.';
+  }
+  return 'Olhar de fora costuma ver primeiro o que dentro da empresa já era padrão.';
+}
+
+function buildBriefingText(item) {
+  const f = suggestFormat(item);
+  const data = fmtDate(item.published_iso);
+  return [
+    `MANCHETE: ${item.title}`,
+    `FONTE: ${item.source} — ${item.link}`,
+    `DATA: ${data}`,
+    `RESUMO: ${item.summary}`,
+    `IMPACTO NO CLIENTE: ${impactoHeuristica(item)}`,
+    `ÂNGULO: ${f.formato}, enquadramento ${f.enquadramento.toLowerCase()}`,
+    `GANCHO: ${ganchoHeuristica(item)}`,
+  ].join('\n\n');
+}
+
+function themeChip(name, count=null) {
+  const active = state.activeThemes.has(name);
+  return `
+    <button class="chip text-xs px-3 py-1.5 rounded-full border border-ink-700 bg-ink-900 text-zinc-300 hover:border-accent"
+            data-theme="${name}" aria-pressed="${active ? 'true' : 'false'}">
+      ${name}${count !== null ? ` <span class="opacity-60">(${count})</span>` : ''}
+    </button>`;
+}
+
+function renderFilters() {
+  const counts = {};
+  (state.data?.themes_catalog || []).forEach(t => counts[t] = 0);
+  (state.data?.selected || []).forEach(i => (i.themes || []).forEach(t => { counts[t] = (counts[t] || 0) + 1; }));
+  const all = state.data?.themes_catalog || [];
+  $('#filters').innerHTML = all.map(t => themeChip(t, counts[t] || 0)).join('');
+  $$('#filters .chip').forEach(b => {
+    b.addEventListener('click', () => {
+      const t = b.dataset.theme;
+      if (state.activeThemes.has(t)) state.activeThemes.delete(t);
+      else state.activeThemes.add(t);
+      renderFilters();
+      renderList();
+    });
+  });
+}
+
+function filteredItems() {
+  const items = state.data?.selected || [];
+  if (state.activeThemes.size === 0) return items;
+  return items.filter(i => (i.themes || []).some(t => state.activeThemes.has(t)));
+}
+
+function renderFeatured() {
+  const top = (state.data?.selected || [])[0];
+  if (!top) { $('#featured-wrap').classList.add('hidden'); return; }
+  $('#featured-wrap').classList.remove('hidden');
+  const f = suggestFormat(top);
+  $('#featured').innerHTML = `
+    <div class="rounded-xl border border-accent/40 bg-gradient-to-br from-ink-900 to-ink-800 p-6">
+      <div class="flex flex-wrap gap-2 mb-3">
+        ${(top.themes || []).map(t => `<span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-accent/15 text-accent-soft border border-accent/30">${t}</span>`).join('')}
+      </div>
+      <a href="${top.link}" target="_blank" rel="noopener" class="block font-serif text-2xl sm:text-3xl text-white hover:text-accent leading-tight">${escapeHtml(top.title)}</a>
+      <div class="mt-2 text-xs text-zinc-400">${escapeHtml(top.source)} · ${fmtDate(top.published_iso)}</div>
+      <p class="mt-4 text-sm text-zinc-300 leading-relaxed">${escapeHtml(top.summary || '')}</p>
+      <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm border-t border-ink-700 pt-4">
+        <div><div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Por que abrir o dia com isso</div><div class="text-zinc-200">Maior pontuação na curadoria. Combina relevância técnica com tema já em discussão no público.</div></div>
+        <div><div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Formato sugerido</div><div class="text-zinc-200">${f.formato}, enquadramento ${f.enquadramento.toLowerCase()}.</div></div>
+        <div><div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Gancho de abertura</div><div class="text-zinc-200">${ganchoHeuristica(top)}</div></div>
+      </div>
+    </div>`;
+}
+
+function escapeHtml(s) {
+  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function renderList() {
+  const items = filteredItems();
+  $('#count').textContent = `${items.length} ${items.length === 1 ? 'item' : 'itens'}`;
+  const tpl = $('#tpl-card');
+  const list = $('#list');
+  list.innerHTML = '';
+  if (items.length === 0) {
+    list.innerHTML = `<div class="text-sm text-zinc-500 py-6">Nenhum item para os filtros atuais. Limpe os filtros ou clique em Atualizar.</div>`;
+    return;
+  }
+  items.forEach((item, idx) => {
+    const node = tpl.content.cloneNode(true);
+    const article = node.querySelector('article');
+    article.dataset.idx = idx;
+    const a = node.querySelector('.title');
+    a.textContent = item.title;
+    a.href = item.link;
+    node.querySelector('.meta').textContent = `${item.source} · ${fmtDate(item.published_iso)} · score ${item.score}`;
+    node.querySelector('.summary').textContent = item.summary || '';
+    const themesEl = node.querySelector('.themes');
+    themesEl.innerHTML = (item.themes || []).map(t =>
+      `<span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-ink-800 text-zinc-300 border border-ink-700">${t}</span>`
+    ).join('');
+
+    const f = suggestFormat(item);
+    const briefing = node.querySelector('.briefing');
+    briefing.innerHTML = `
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Impacto no cliente final</div>
+        <div class="text-zinc-200">${escapeHtml(impactoHeuristica(item))}</div>
+      </div>
+      <div>
+        <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Formato e enquadramento</div>
+        <div class="text-zinc-200">${f.formato}, enquadramento ${f.enquadramento.toLowerCase()}.</div>
+      </div>
+      <div class="sm:col-span-2">
+        <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Gancho de abertura</div>
+        <div class="text-zinc-200 italic">"${escapeHtml(ganchoHeuristica(item))}"</div>
+      </div>`;
+
+    node.querySelector('.copy').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      try {
+        await navigator.clipboard.writeText(buildBriefingText(item));
+        const old = btn.textContent;
+        btn.textContent = 'Copiado';
+        setTimeout(() => btn.textContent = old, 1500);
+      } catch {
+        btn.textContent = 'Não foi possível copiar';
+      }
+    });
+
+    list.appendChild(node);
+  });
+}
+
+async function load() {
+  $('#status').textContent = 'Buscando feeds em paralelo. Pode levar alguns segundos na primeira vez.';
+  $('#list').innerHTML = '';
+  $('#featured-wrap').classList.add('hidden');
+  try {
+    const res = await fetch('/api/news', { cache: 'no-store' });
+    const data = await res.json();
+    state.data = data;
+    const total = (data.selected || []).length;
+    const generated = data.generated_at ? new Date(data.generated_at) : new Date();
+    $('#meta').textContent = `${total} itens · atualizado ${generated.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}`;
+    $('#status').textContent = '';
+    renderFilters();
+    renderFeatured();
+    renderList();
+    renderErrors(data.errors || []);
+  } catch (e) {
+    $('#status').textContent = 'Falha ao carregar notícias. Verifique sua conexão e tente novamente.';
+  }
+}
+
+function renderErrors(errors) {
+  if (!errors.length) { $('#errors').innerHTML = ''; return; }
+  $('#errors').innerHTML = `Fontes que falharam nesta rodada: ${errors.map(e => escapeHtml(e.source)).join(', ')}.`;
+}
+
+setToday();
+$('#refresh').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>
