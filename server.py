@@ -18,6 +18,7 @@ import re
 import html
 import os
 import socket
+import sys
 import gzip
 import io
 
@@ -403,7 +404,21 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, "not found", "text/plain")
 
 
+def build_static(output_path):
+    """Gera o JSON e grava em disco, para deploy estático (GitHub Pages)."""
+    data = aggregate()
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    selected = len(data.get("selected", []))
+    errors = len(data.get("errors", []))
+    print(f"news.json gerado em {output_path} — {selected} itens, {errors} fontes com erro")
+
+
 def main():
+    if "--build" in sys.argv:
+        out = os.path.join(ROOT, "news.json")
+        build_static(out)
+        return
     httpd = ThreadingHTTPServer((HOST, PORT), Handler)
     print(f"NewsSearch rodando em http://{HOST}:{PORT}")
     print("Abra essa URL no navegador. Ctrl+C para encerrar.")

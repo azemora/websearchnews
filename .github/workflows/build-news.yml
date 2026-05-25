@@ -1,0 +1,62 @@
+name: Build news.json
+
+on:
+  schedule:
+    # A cada 1 hora. Ajuste o cron se quiser mais ou menos frequência.
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - 'server.py'
+      - '.github/workflows/build-news.yml'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: build-news
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Gerar news.json
+        run: python server.py --build
+
+      - name: Commit news.json se mudou
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- news.json; then
+            echo "news.json sem mudanças, nada a commitar."
+          else
+            git add news.json
+            git commit -m "chore: atualiza news.json [skip ci]"
+            git push
+          fi
+
+      - name: Upload artefato do Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

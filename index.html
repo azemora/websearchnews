@@ -311,13 +311,27 @@ function renderList() {
   });
 }
 
+async function fetchNews() {
+  // Em produção (GitHub Pages), lemos o JSON estático gerado pelo workflow.
+  // Em dev local (python server.py), o endpoint /api/news regenera ao vivo.
+  // Tenta o estático primeiro; se falhar (404 ou inválido), cai pro endpoint.
+  try {
+    const res = await fetch('news.json', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.selected)) return data;
+    }
+  } catch (_) { /* segue para o fallback */ }
+  const res = await fetch('/api/news', { cache: 'no-store' });
+  return res.json();
+}
+
 async function load() {
-  $('#status').textContent = 'Buscando feeds em paralelo. Pode levar alguns segundos na primeira vez.';
+  $('#status').textContent = 'Carregando curadoria. Pode levar alguns segundos na primeira vez.';
   $('#list').innerHTML = '';
   $('#featured-wrap').classList.add('hidden');
   try {
-    const res = await fetch('/api/news', { cache: 'no-store' });
-    const data = await res.json();
+    const data = await fetchNews();
     state.data = data;
     const total = (data.selected || []).length;
     const generated = data.generated_at ? new Date(data.generated_at) : new Date();
